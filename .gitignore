@@ -1,0 +1,49 @@
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+venv/
+env/
+.venv/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Large data files
+data/*.pkl
+data/*.npz
+data/*.npy
+
+# Raw dataset images (optional, recommended)
+data/lfw/
+data/images/
+
+# Attendance logs (optional)
+attendance.csv
+
+# DeepFace cache
+~/.deepface/
+deepface_cache/
+
+# Model weights (if any)
+*.h5
+*.pt
+*.pth
+
+# Build artifacts
+dist/
+build/

@@ -1,0 +1,11 @@
+deeplake==3.6.12
+deepface==0.0.79
+opencv-python==4.9.0.80
+numpy==1.26.4
+pandas==2.2.2
+tensorflow==2.16.1
+scikit-learn==1.4.2
+matplotlib==3.8.4
+gradio==4.29.0
+Pillow==10.3.0
+tqdm==4.66.4

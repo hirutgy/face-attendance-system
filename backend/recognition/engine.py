@@ -1,25 +1,18 @@
-import numpy as np
 from sqlalchemy.orm import Session
+
+from backend.config import MATCH_THRESHOLD
 from backend.database.models import User
+from backend.recognition.index import embedding_index
 
-def cosine_similarity(a, b):
-    a = np.array(a)
-    b = np.array(b)
-    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-def find_best_match(db: Session, embedding: list, threshold: float = 0.7):
-    users = db.query(User).all()
+def find_best_match(
+    db: Session,
+    embedding: list,
+    threshold: float = MATCH_THRESHOLD,
+) -> tuple[User | None, float]:
+    user_id, score = embedding_index.find_best_match(embedding, threshold)
+    if user_id is None:
+        return None, score
 
-    best_user = None
-    best_score = -1
-
-    for user in users:
-        score = cosine_similarity(embedding, user.embedding)
-        if score > best_score:
-            best_score = score
-            best_user = user
-
-    if best_score < threshold:
-        return None, best_score
-
-    return best_user, best_score
+    user = db.query(User).filter(User.id == user_id).first()
+    return user, score

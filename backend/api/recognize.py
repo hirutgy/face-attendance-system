@@ -1,44 +1,49 @@
-from fastapi import APIRouter, UploadFile, File
-from backend.models.facenet_model import get_embedding
-from backend.database.database import SessionLocal
-from backend.database.models import User
-from backend.detection.mtcnn_detector import detect_face
+from typing import Annotated
+
+from fastapi import APIRouter, UploadFile, File, Depends, Query
+from sqlalchemy.orm import Session
+
+from backend.database.crud import log_attendance
+from backend.database.dp import get_db
+from backend.recognition.engine import find_best_match
+from backend.recognition.pipeline import image_to_embedding
+from backend.utils.validation import SUPPORTED_FORMATS_LABEL, read_validated_image
 
 router = APIRouter()
 
-@router.post("/")
-async def recognize(image: UploadFile = File(...)):
-    # Read image bytes
-    img_bytes = await image.read()
+PhotoField = Annotated[
+    UploadFile,
+    File(description=f"Face photo to identify. Formats: {SUPPORTED_FORMATS_LABEL}."),
+]
 
-    # Detect face
-    face = detect_face(img_bytes)
-    if face is None:
-        return {"status": "error", "message": "No face detected"}
 
-    # Generate embedding
-    embedding = get_embedding(face)
-
-    # Compare with DB
-    db = SessionLocal()
-    users = db.query(User).all()
-
-    best_match = None
-    best_distance = 999
-
-    for user in users:
-        dist = sum((e1 - e2)**2 for e1, e2 in zip(embedding, user.embedding))
-        if dist < best_distance:
-            best_distance = dist
-            best_match = user
-
-    db.close()
+@router.post("/", summary="Recognize a face")
+async def recognize(
+    file: PhotoField,
+    log: bool = Query(default=False, description="Log attendance if matched"),
+    db: Session = Depends(get_db),
+):
+    image_bytes = await read_validated_image(file)
+    embedding = image_to_embedding(image_bytes)
+    best_match, confidence = find_best_match(db, embedding)
 
     if best_match is None:
-        return {"status": "error", "message": "No users in database"}
+        return {
+            "status": "error",
+            "message": "No matching user found",
+            "confidence": confidence,
+        }
 
-    return {
+    response = {
         "status": "success",
         "name": best_match.name,
-        "distance": best_distance
+        "user_id": best_match.id,
+        "confidence": confidence,
     }
+
+    if log:
+        entry = log_attendance(db, best_match.id, confidence)
+        response["attendance_logged"] = True
+        response["timestamp"] = entry.timestamp.isoformat()
+
+    return response

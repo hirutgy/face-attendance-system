@@ -1,39 +1,47 @@
-import json
 from collections import defaultdict
 from datetime import datetime
 
-ATTENDANCE_FILE = "backend/database/attendance.json"
+from sqlalchemy.orm import Session
 
-def load_attendance():
-    with open(ATTENDANCE_FILE, "r") as f:
-        return json.load(f)
+from backend.database.models import Attendance, User
 
-def compute_analytics():
-    records = load_attendance()
+
+def compute_analytics(db: Session) -> dict:
+    records = (
+        db.query(Attendance)
+        .join(User)
+        .order_by(Attendance.timestamp.desc())
+        .all()
+    )
 
     total_entries = len(records)
+    per_person: dict[str, int] = defaultdict(int)
+    per_day: dict[str, int] = defaultdict(int)
 
-    # attendance count per person
-    per_person = defaultdict(int)
-    for r in records:
-        per_person[r["name"]] += 1
-
-    # attendance per day
-    per_day = defaultdict(int)
-    for r in records:
-        day = r["timestamp"].split("T")[0]
+    for record in records:
+        per_person[record.user.name] += 1
+        day = record.timestamp.date().isoformat()
         per_day[day] += 1
 
-    # latest check-ins (sorted by timestamp)
-    latest = sorted(records, key=lambda x: x["timestamp"], reverse=True)[:10]
+    latest = [
+        {
+            "name": record.user.name,
+            "confidence": record.confidence,
+            "timestamp": record.timestamp.isoformat(),
+        }
+        for record in records[:10]
+    ]
 
-    # average confidence
-    avg_conf = sum(r["confidence"] for r in records) / total_entries if total_entries else 0
+    avg_conf = (
+        sum(record.confidence for record in records) / total_entries
+        if total_entries
+        else 0.0
+    )
 
     return {
         "total_entries": total_entries,
         "per_person": dict(per_person),
         "per_day": dict(per_day),
         "latest_checkins": latest,
-        "average_confidence": avg_conf
+        "average_confidence": avg_conf,
     }

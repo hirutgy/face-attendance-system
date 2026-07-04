@@ -1,38 +1,59 @@
-from fastapi import APIRouter, UploadFile, File, Form
-from backend.detection.mtcnn_detector import detect_face
-from backend.models.facenet_model import get_embedding
+from typing import Annotated
+
+from fastapi import APIRouter, UploadFile, File, Form, Depends
+from sqlalchemy.orm import Session
+
+from backend.auth import require_admin
 from backend.database.crud import create_user
-import numpy as np
-from PIL import Image
-import io
+from backend.database.dp import get_db
+from backend.recognition.pipeline import image_to_embedding
+from backend.utils.validation import SUPPORTED_FORMATS_LABEL, read_validated_image
 
 router = APIRouter()
 
-@router.post("/register")
+NameField = Annotated[str, Form(description="Person's full name", examples=["Alice Smith"])]
+PhotosField = Annotated[
+    list[UploadFile],
+    File(
+        description=(
+            f"Upload 1–5 face photos. Supported formats: {SUPPORTED_FORMATS_LABEL}. "
+            "In Swagger UI, use the file picker — do not type text into this field."
+        ),
+    ),
+]
+PhotoField = Annotated[
+    UploadFile,
+    File(
+        description=f"One face photo. Supported formats: {SUPPORTED_FORMATS_LABEL}.",
+    ),
+]
+
+
+@router.post(
+    "/register",
+    summary="Register a user with face photos",
+    response_description="Registration result with user id and embedding count",
+)
 async def register_user(
-    name: str = Form(...),
-    file: UploadFile = File(...)
+    name: NameField,
+    files: PhotosField,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
 ):
-    # Read image bytes
-    image_bytes = await file.read()
+    if not files:
+        return {"status": "error", "message": "At least one photo is required"}
 
-    # Detect + align face
-    faces = detect_face(image_bytes)
+    embeddings = []
+    for upload in files:
+        image_bytes = await read_validated_image(upload)
+        embeddings.append(image_to_embedding(image_bytes))
 
-    if len(faces) == 0:
-        return {"error": "No face detected"}
-
-    # Use the first detected face
-    aligned_face = np.array(faces[0]["aligned_face"], dtype=np.float32)
-
-    # Generate embedding
-    embedding = get_embedding(aligned_face)
-
-    # Save to DB
-    create_user(name=name, embedding=embedding)
+    user = create_user(name=name, embeddings=embeddings, db=db)
 
     return {
         "status": "success",
-        "name": name,
-        "embedding_dim": len(embedding)
+        "message": f"User '{name}' registered with {len(embeddings)} photo(s)",
+        "name": user.name,
+        "user_id": user.id,
+        "embeddings_added": len(embeddings),
     }

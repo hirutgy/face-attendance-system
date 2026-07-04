@@ -1,0 +1,46 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: face-attendance-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./models_local:/app/models_local
+      - attendance_data:/app/backend/database
+    environment:
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      MATCH_THRESHOLD: ${MATCH_THRESHOLD:-0.7}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-http://localhost:8000}
+        VITE_ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+    container_name: face-attendance-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  attendance_data:

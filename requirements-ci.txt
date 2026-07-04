@@ -1,3 +1,4 @@
+# Minimal deps for CI tests (no TensorFlow — MTCNN loads lazily and is not used in tests)
 fastapi==0.115.12
 uvicorn==0.37.0
 numpy>=1.26.0,<2.2.0
@@ -7,7 +8,6 @@ sqlalchemy==2.0.38
 pydantic==2.11.3
 python-multipart==0.0.20
 pillow==11.2.1
-scikit-learn==1.6.1
-mtcnn==1.0.0
-tensorflow==2.19.0
 slowapi==0.1.9
+pytest==8.3.5
+httpx==0.28.1

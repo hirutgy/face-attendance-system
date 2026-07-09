@@ -17,7 +17,9 @@ function Recognize() {
 
         setLoading(true);
         setResult(null);
-
+        console.log("IMAGE =", image);
+        console.log("Is File?", image instanceof File);
+        console.log("Type:", typeof image);
         const formData = new FormData();
         formData.append("file", image);
 
@@ -45,9 +47,11 @@ function Recognize() {
                 });
             }
         } catch (error) {
+            console.error(error);
+
             setResult({
                 success: false,
-                message: "Network error. Is the backend running?",
+                message: error.message || "Unknown error occurred.",
             });
         } finally {
             setLoading(false);
@@ -90,8 +94,12 @@ function Recognize() {
                         <h3>Upload Face Image</h3>
 
                         <FileUpload
+                            multiple={false}
                             files={image}
-                            onChange={setImage}
+                            onChange={(file) => {
+                                console.log("received:",file)
+                                setImage(file);
+                            }}
                             disabled={loading}
                         />
                     </div>

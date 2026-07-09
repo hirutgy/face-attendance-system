@@ -1,8 +1,11 @@
+import "./App.css";
 import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+
 import Register from "./pages/Register";
 import Recognize from "./pages/Recognize";
 import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
+import Assistant from "./pages/Assistant";
 
 function App() {
     return (
@@ -11,6 +14,7 @@ function App() {
                 <header className="navbar">
                     <div className="logo">
                         <span className="logo-icon">🎓</span>
+
                         <div>
                             <h1>Face Attendance</h1>
                             <small>Recognition System</small>
@@ -45,15 +49,44 @@ function App() {
                         >
                             Dashboard
                         </NavLink>
+
+                        <NavLink
+                            to="/assistant"
+                            className={({ isActive }) =>
+                                isActive ? "nav-link active" : "nav-link"
+                            }
+                        >
+                            🤖 Assistant
+                        </NavLink>
                     </nav>
                 </header>
 
                 <main className="page-content">
                     <Routes>
-                        <Route path="/" element={<Register />} />
-                        <Route path="/recognize" element={<Recognize />} />
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/profile/:userId" element={<Profile />} />
+                        <Route
+                            path="/"
+                            element={<Register />}
+                        />
+
+                        <Route
+                            path="/recognize"
+                            element={<Recognize />}
+                        />
+
+                        <Route
+                            path="/dashboard"
+                            element={<Dashboard />}
+                        />
+
+                        <Route
+                            path="/profile/:userId"
+                            element={<Profile />}
+                        />
+
+                        <Route
+                            path="/assistant"
+                            element={<Assistant />}
+                        />
                     </Routes>
                 </main>
             </div>

@@ -1,21 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../components/PageHeader/PageHeader";
-import { fetchAttendance } from "../api/api";
+import {
+    fetchAttendance,
+    fetchAnalytics,
+    fetchUsers,
+} from "../api/api";
 import "./Dashboard.css";
 
 function Dashboard() {
     const [attendance, setAttendance] = useState([]);
+    const [analytics, setAnalytics] = useState(null);
+    const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
         async function load() {
             try {
-                const data = await fetchAttendance();
-                setAttendance(data.records || []);
+                const attendanceData = await fetchAttendance();
+                const analyticsData = await fetchAnalytics();
+                const usersData = await fetchUsers();
+
+                setAttendance(attendanceData.records || []);
+                setAnalytics(analyticsData);
+
+                setUsers(
+                    Array.isArray(usersData)
+                        ? usersData
+                        : usersData.users || usersData.records || []
+                );
             } catch (error) {
-                console.error("Error fetching attendance:", error);
+                console.error("Error fetching dashboard data:", error);
             } finally {
                 setLoading(false);
             }
@@ -30,14 +46,17 @@ function Dashboard() {
         );
     }, [attendance, search]);
 
-    const totalAttendance = attendance.length;
+    const uniqueUsers = users.length;
 
-    const uniqueUsers = new Set(
-        attendance.map((record) => record.user_id)
-    ).size;
+    const totalAttendance =
+        analytics?.total_attendance_records ??
+        analytics?.total_attendance ??
+        attendance.length;
 
     const averageConfidence =
-        attendance.length > 0
+        analytics?.average_confidence !== undefined
+            ? Number(analytics.average_confidence).toFixed(2)
+            : attendance.length > 0
             ? (
                   attendance.reduce(
                       (sum, record) => sum + (record.confidence || 0),
@@ -54,10 +73,7 @@ function Dashboard() {
                 subtitle="Monitor attendance records, recognition confidence, and registered users."
             />
 
-            {/* Statistics */}
-
             <div className="stats-grid">
-
                 <div className="stat-card">
                     <div className="stat-icon">👥</div>
                     <h3>{uniqueUsers}</h3>
@@ -75,23 +91,16 @@ function Dashboard() {
                     <h3>{averageConfidence}%</h3>
                     <p>Average Confidence</p>
                 </div>
-
             </div>
 
-            {/* Search */}
-
             <div className="dashboard-search">
-
                 <input
                     type="text"
                     placeholder="Search by name..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                 />
-
             </div>
-
-            {/* Loading */}
 
             {loading && (
                 <div className="dashboard-empty">
@@ -99,25 +108,19 @@ function Dashboard() {
                 </div>
             )}
 
-            {/* Empty */}
-
             {!loading && filteredAttendance.length === 0 && (
                 <div className="dashboard-empty">
                     <h3>No attendance records found</h3>
-                    <p>Attendance records will appear here after recognition.</p>
+                    <p>
+                        Attendance records will appear here after recognition.
+                    </p>
                 </div>
             )}
 
-            {/* Table */}
-
             {!loading && filteredAttendance.length > 0 && (
-
                 <div className="table-container">
-
                     <table>
-
                         <thead>
-
                             <tr>
                                 <th>Name</th>
                                 <th>Time</th>
@@ -125,54 +128,34 @@ function Dashboard() {
                                 <th>Confidence</th>
                                 <th>Profile</th>
                             </tr>
-
                         </thead>
 
                         <tbody>
-
                             {filteredAttendance.map((record) => (
-
                                 <tr key={`${record.user_id}-${record.time}`}>
-
                                     <td>{record.name}</td>
-
                                     <td>{record.time}</td>
-
                                     <td>
-
                                         <span className="dashboard-status">
                                             {record.status}
                                         </span>
-
                                     </td>
-
                                     <td>
-
                                         {(record.confidence ?? 0).toFixed(2)}%
-
                                     </td>
-
                                     <td>
-
                                         <Link
                                             className="profile-link"
                                             to={`/profile/${record.user_id}`}
                                         >
                                             View
                                         </Link>
-
                                     </td>
-
                                 </tr>
-
                             ))}
-
                         </tbody>
-
                     </table>
-
                 </div>
-
             )}
         </div>
     );

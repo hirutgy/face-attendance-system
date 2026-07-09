@@ -9,7 +9,8 @@ export default function Register() {
     const [images, setImages] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
-        const resetForm = () => {
+
+    const resetForm = () => {
         setName("");
         setImages([]);
     };
@@ -41,19 +42,24 @@ export default function Register() {
 
             const result = await registerUser(formData);
 
-            if (result.success) {
-                setMessage("✅ User registered successfully!");
+            if (result.status === "success") {
+                setMessage(`✅ ${result.message}`);
                 resetForm();
             } else {
-                setMessage(result.detail || "Registration failed.");
+                setMessage(
+                    result.message ||
+                    result.detail ||
+                    "Registration failed."
+                );
             }
         } catch (error) {
-            setMessage("Unable to connect to the server.");
+            setMessage(error.message || "Unable to connect to the server.");
         } finally {
             setLoading(false);
         }
     };
-        return (
+
+    return (
         <div className="container">
             <PageHeader
                 icon="👤"
@@ -63,7 +69,6 @@ export default function Register() {
 
             <form className="form" onSubmit={handleSubmit}>
                 <div className="form-card">
-
                     <div className="form-section">
                         <h3>Student Information</h3>
 
@@ -102,11 +107,8 @@ export default function Register() {
                             images.length === 0
                         }
                     >
-                        {loading
-                            ? "Registering..."
-                            : "Register Student"}
+                        {loading ? "Registering..." : "Register Student"}
                     </button>
-
                 </div>
             </form>
 

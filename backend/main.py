@@ -1,3 +1,4 @@
+from backend.api.assistant import router as assistant_router
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -54,6 +55,19 @@ app.include_router(analytics_router, prefix="/attendance/analytics", tags=["anal
 app.include_router(users_router, prefix="/users", tags=["users"])
 app.include_router(detect_router, prefix="/detect", tags=["detect"])
 app.include_router(embed_router, prefix="/embed", tags=["embed"])
+app.include_router(register_router, prefix="/register", tags=["register"])
+app.include_router(recognize_router, prefix="/recognize", tags=["recognize"])
+app.include_router(attendance_router, prefix="/attendance", tags=["attendance"])
+app.include_router(analytics_router, prefix="/attendance/analytics", tags=["analytics"])
+app.include_router(users_router, prefix="/users", tags=["users"])
+app.include_router(detect_router, prefix="/detect", tags=["detect"])
+app.include_router(embed_router, prefix="/embed", tags=["embed"])
+
+app.include_router(
+    assistant_router,
+    prefix="/assistant",
+    tags=["assistant"],
+)
 
 setup_openapi(app)
 
@@ -65,3 +79,8 @@ def health(request: Request):
         "status": "ok",
         "model_present": MODEL_PATH.exists(),
     }
+app.include_router(
+    assistant_router,
+    prefix="/assistant",
+    tags=["assistant"],
+)

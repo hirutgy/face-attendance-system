@@ -12,3 +12,7 @@ def image_to_embedding(image_bytes: bytes) -> list:
 
     aligned_face = np.array(faces[0]["aligned_face"], dtype=np.float32)
     return get_embedding(aligned_face)
+def image_to_embedding(image_bytes: bytes) -> list:
+    print("✅ PIPELINE STARTED")
+    faces = detect_face(image_bytes)
+    print("✅ DETECT FACE DONE")

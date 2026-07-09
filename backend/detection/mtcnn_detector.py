@@ -27,11 +27,14 @@ def detect_and_align(image_bytes: bytes):
     results = _get_detector().detect_faces(img)
 
     aligned_faces = []
+
     for result in results:
         box = result["box"]
         keypoints = result["keypoints"]
+
         crop_face(img, box)
         aligned = align_face(img, keypoints)
+
         aligned_faces.append(
             {
                 "box": box,

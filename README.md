@@ -453,6 +453,19 @@ Offline benchmark results are in [`evaluation_report.txt`](evaluation_report.txt
 - **Macro F1:** ~0.87
 
 ---
+## AI Assistant
+
+The Face Attendance System includes an AI-powered assistant that allows users to ask questions about attendance using natural language.
+
+Example questions:
+
+- Who checked in today?
+- How many people were present this week?
+- Show John's latest attendance.
+- Which users have the highest attendance?
+- How many attendance records are stored?
+
+The assistant retrieves information directly from the attendance database and returns conversational responses.
 
 ## License
 

@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 import onnxruntime as ort
 
@@ -23,13 +24,27 @@ def l2_normalize(x):
 
 
 def get_embedding(face):
+    # Convert to float32
     face = np.asarray(face, dtype=np.float32)
+
+    # Resize to the model's expected input size
+    face = cv2.resize(face, (368, 368))
+
+    # Normalize
     face = face / 255.0
-    face = np.resize(face, (160, 160, 3))
+
+    # Change from HWC -> CHW
+    face = np.transpose(face, (2, 0, 1))
+
+    # Add batch dimension
     face = np.expand_dims(face, axis=0)
 
     session = _get_session()
-    inputs = {session.get_inputs()[0].name: face}
+
+    inputs = {
+        session.get_inputs()[0].name: face.astype(np.float32)
+    }
+
     embedding = session.run(None, inputs)[0][0]
     embedding = l2_normalize(embedding)
 

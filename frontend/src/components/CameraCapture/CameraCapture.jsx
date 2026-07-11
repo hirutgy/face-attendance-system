@@ -44,19 +44,30 @@ export default function CameraCapture({
         try {
             stopCamera();
 
+            // ⭐ Edge-safe camera selection
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const camera = devices.find((d) => d.kind === "videoinput");
+
+            if (!camera) {
+                setError("No camera device found.");
+                return;
+            }
+
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
-                video: {
-                    facingMode,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                },
+                video: { deviceId: camera.deviceId }, // ⭐ FIXED for Edge
             });
 
             streamRef.current = stream;
 
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
+
+                // ⭐ Edge requires metadata before play()
+                await new Promise((resolve) => {
+                    videoRef.current.onloadedmetadata = resolve;
+                });
+
                 await videoRef.current.play();
             }
 
@@ -66,7 +77,7 @@ export default function CameraCapture({
             setError(
                 err?.name === "NotAllowedError"
                     ? "Camera permission denied. Allow access and try again."
-                    : "Unable to open the camera. Check permissions and try again.",
+                    : "Unable to open the camera. Check permissions and try again."
             );
             stopCamera();
         }
@@ -76,7 +87,6 @@ export default function CameraCapture({
         return () => {
             stopCamera();
         };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const takePhoto = async () => {
@@ -102,7 +112,7 @@ export default function CameraCapture({
                         else reject(new Error("Failed to capture frame"));
                     },
                     "image/jpeg",
-                    0.92,
+                    0.92
                 );
             });
 

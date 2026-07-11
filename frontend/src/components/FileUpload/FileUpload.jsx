@@ -172,7 +172,9 @@ export default function FileUpload({
                                 ? "source-btn active"
                                 : "source-btn"
                         }
-                        onClick={() => setSource("camera")}
+                        onClick={() => {
+                            setSource("camera");
+                        }}
                         disabled={disabled}
                     >
                         Camera

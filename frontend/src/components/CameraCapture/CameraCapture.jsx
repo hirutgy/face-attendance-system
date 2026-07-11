@@ -20,21 +20,59 @@ export default function CameraCapture({
     const [error, setError] = useState("");
     const [capturing, setCapturing] = useState(false);
 
-    const stopCamera = () => {
+    const stopTracks = () => {
         if (streamRef.current) {
             streamRef.current.getTracks().forEach((track) => track.stop());
             streamRef.current = null;
         }
+    };
+
+    const stopCamera = () => {
+        stopTracks();
         if (videoRef.current) {
             videoRef.current.srcObject = null;
         }
         setActive(false);
     };
 
+    // Attach stream after the video element is mounted
+    useEffect(() => {
+        const video = videoRef.current;
+        const stream = streamRef.current;
+
+        if (!active || !video || !stream) return;
+
+        video.srcObject = stream;
+        const playPromise = video.play();
+        if (playPromise?.catch) {
+            playPromise.catch((err) => {
+                console.error(err);
+                setError("Unable to play camera preview. Try again.");
+            });
+        }
+
+        return () => {
+            video.srcObject = null;
+        };
+    }, [active]);
+
+    useEffect(() => {
+        return () => {
+            stopTracks();
+        };
+    }, []);
+
     const startCamera = async () => {
         if (disabled) return;
 
         setError("");
+
+        if (!window.isSecureContext && location.hostname !== "localhost") {
+            setError(
+                "Camera requires HTTPS or localhost. Open the app via http://localhost:5173.",
+            );
+            return;
+        }
 
         if (!navigator.mediaDevices?.getUserMedia) {
             setError("Camera is not supported in this browser.");
@@ -44,30 +82,19 @@ export default function CameraCapture({
         try {
             stopCamera();
 
-            // ⭐ Edge-safe camera selection
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const camera = devices.find((d) => d.kind === "videoinput");
-
-            if (!camera) {
-                setError("No camera device found.");
-                return;
-            }
-
             const stream = await navigator.mediaDevices.getUserMedia({
                 audio: false,
-                video: { deviceId: camera.deviceId }, // ⭐ FIXED for Edge
+                video: {
+                    facingMode,
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                },
             });
 
             streamRef.current = stream;
 
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
-
-                // ⭐ Edge requires metadata before play()
-                await new Promise((resolve) => {
-                    videoRef.current.onloadedmetadata = resolve;
-                });
-
                 await videoRef.current.play();
             }
 
@@ -77,7 +104,7 @@ export default function CameraCapture({
             setError(
                 err?.name === "NotAllowedError"
                     ? "Camera permission denied. Allow access and try again."
-                    : "Unable to open the camera. Check permissions and try again."
+                    : "Unable to open the camera. Check permissions and try again.",
             );
             stopCamera();
         }
@@ -87,6 +114,7 @@ export default function CameraCapture({
         return () => {
             stopCamera();
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const takePhoto = async () => {
@@ -94,15 +122,21 @@ export default function CameraCapture({
         if (!video || !active || disabled) return;
 
         setCapturing(true);
+        setError("");
 
         try {
-            const width = video.videoWidth || 640;
-            const height = video.videoHeight || 480;
+            await waitForFrame(video);
+
+            const width = video.videoWidth;
+            const height = video.videoHeight;
             const canvas = document.createElement("canvas");
             canvas.width = width;
             canvas.height = height;
 
             const ctx = canvas.getContext("2d");
+            // Match mirrored preview so the saved photo looks the same
+            ctx.translate(width, 0);
+            ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, width, height);
 
             const blob = await new Promise((resolve, reject) => {
@@ -119,7 +153,7 @@ export default function CameraCapture({
             onCapture(createCaptureFile(blob));
         } catch (err) {
             console.error(err);
-            setError("Could not capture photo. Please try again.");
+            setError("Could not capture photo. Wait for the preview, then try again.");
         } finally {
             setCapturing(false);
         }
@@ -127,16 +161,17 @@ export default function CameraCapture({
 
     return (
         <div className="camera-capture">
-            <div className="camera-preview">
-                {active ? (
-                    <video
-                        ref={videoRef}
-                        className="camera-video"
-                        playsInline
-                        muted
-                        autoPlay
-                    />
-                ) : (
+            <div className={`camera-preview ${active ? "is-active" : ""}`}>
+                <video
+                    ref={videoRef}
+                    className="camera-video"
+                    playsInline
+                    muted
+                    autoPlay
+                    style={{ display: active ? "block" : "none" }}
+                />
+
+                {!active && (
                     <div className="camera-placeholder">
                         <div className="camera-placeholder-icon">📷</div>
                         <p>Start the camera to take a face photo</p>
@@ -179,7 +214,8 @@ export default function CameraCapture({
             {error && <div className="camera-error">{error}</div>}
 
             <small className="camera-hint">
-                Use a clear, front-facing view with good lighting.
+                Use a clear, front-facing view with good lighting. Prefer
+                http://localhost:5173 so the browser allows camera access.
             </small>
         </div>
     );
